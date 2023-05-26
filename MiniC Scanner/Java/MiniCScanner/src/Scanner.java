@@ -151,6 +151,12 @@ public class Scanner {
             case '}': ch = nextChar();
             return Token.rightBraceTok;
 
+            case '[': ch = nextChar();
+            return Token.leftBracketTok;
+
+            case ']': ch = nextChar();
+            return Token.rightBracketTok;
+
             case ';': ch = nextChar();
             return Token.semicolonTok;
 

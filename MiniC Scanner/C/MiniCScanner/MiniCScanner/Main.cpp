@@ -12,7 +12,8 @@ FILE *astFile;                          // AST file
 FILE *sourceFile;                       // miniC source program
 FILE *ucodeFile;                        // ucode file
 
-#define FILE_LEN 30
+int lineNumber = 1,
+	columnNumber = 1;
 
 void main(int argc, char *argv[])
 {
@@ -35,16 +36,27 @@ void main(int argc, char *argv[])
 	
 	
 	struct tokenType token;
+	/**
+	 * additional token attributes
+	 * 
+	 * char fileName[FILE_LEN]
+	 * int lineNumber
+	 * int columnNumber
+	*/
 	
 	printf(" === start of Scanner\n");
 	
 	token = scanner();
+	strcpy_s(token.fileName, fileName);
+	token.lineNumber = lineNumber;
+	token.columnNumber = columnNumber;
 	
 	while (token.number != teof) {
 
 		printf("Current Token --> ");
 		printToken(token);
 		token = scanner();
+		strcpy_s(token.fileName, fileName);
 		
 	} /* while (1) */
 

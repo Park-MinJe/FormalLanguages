@@ -6,8 +6,11 @@
 #pragma once
 
 
-#define NO_KEYWORD 7
+//#define NO_KEYWORD 7
+#define NO_KEYWORD 16
 #define ID_LENGTH 12
+
+#define FILE_LEN 30
 
 struct tokenType {
 	int number;
@@ -15,6 +18,11 @@ struct tokenType {
 		char id[ID_LENGTH];
 		int num;
 	} value;
+
+	// additional token attributes
+	char fileName[FILE_LEN];
+	int lineNumber;
+	int columnNumber;
 };
 
 
@@ -31,10 +39,20 @@ enum tsymbol {
 	tequal, tgreat, tgreate, tlbracket, trbracket, teof,
 	/* 24         25          26        27           28         29     */
 	//   ...........    word symbols ................................. //
-	/* 30         31          32        33           34         35     */
 	tconst, telse, tif, tint, treturn, tvoid,
+	/* 30         31          32        33           34         35     */
+	twhile, tlbrace, tor, trbrace, 
 	/* 36         37          38        39                             */
-	twhile, tlbrace, tor, trbrace
+
+	//   ...........    additional keyword ........................... //
+	tchar,  tdouble,  tfor,  tdo,  tgoto,  tswitch,  tcase,
+	/* 40      41      42     43     44       45      46               */
+	tbreak,  tdefault,
+	/* 47       48                                                     */
+
+	//   ...........    additional operand ........................... //
+	tcolon
+	/* 49                                                              */
 };
 
 

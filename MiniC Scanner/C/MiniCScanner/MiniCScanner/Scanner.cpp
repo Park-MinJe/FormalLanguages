@@ -9,6 +9,7 @@
 #include "Scanner.h"
 
 extern FILE *sourceFile;                       // miniC source program
+extern int lineNumber, columnNumber;		   // line & column number of token
 
 
 int superLetter(char ch);
@@ -33,15 +34,28 @@ char *tokenName[] = {
 	/* 30         31         32        33         34         35        */
 	"const",    "else",     "if",      "int",     "return",  "void",
 	/* 36         37         38        39                              */
-	"while",    "{",        "||",       "}"
+	"while",    "{",        "||",       "}",
+
+	//   ...........    additional keyword ........................... //
+	"char",  "double",  "for",  "do",  "goto",  "switch",  "case",
+	/* 40       41        42     43      44        45        46        */
+	"break",  "default", 
+	/* 47        48                                                    */
+
+	//   ...........    additional operand ........................... //
+	":"
+	/* 49                                                              */
 };
 
 char *keyword[NO_KEYWORD] = {
-	"const",  "else",    "if",    "int",    "return",  "void",    "while"
+	"const",  "else",    "if",    "int",    "return",  "void",    "while", 
+	//   ...........    additional keyword ........................... //
+	"char",  "double",  "for",  "do",  "goto",  "switch",  "case",  "break",  "default"
 };
 
 enum tsymbol tnum[NO_KEYWORD] = {
-	tconst,    telse,     tif,     tint,     treturn,   tvoid,     twhile
+	tconst,    telse,     tif,     tint,     treturn,   tvoid,     twhile,
+	tchar,  tdouble,  tfor,  tdo,  tgoto,  tswitch,  tcase, tbreak,  tdefault
 };
 
 struct tokenType scanner()
@@ -49,6 +63,14 @@ struct tokenType scanner()
 	struct tokenType token;
 	int i, index;
 	char ch, id[ID_LENGTH];
+
+	/**
+	 * additional token attributes
+	 * 
+	 * char fileName[FILE_LEN]
+	 * int lineNumber
+	 * int columnNumber
+	*/
 
 	token.number = tnull;
 
@@ -181,6 +203,7 @@ struct tokenType scanner()
 		case ')': token.number = trparen;         break;
 		case ',': token.number = tcomma;          break;
 		case ';': token.number = tsemicolon;      break;
+		case ':': token.number = tcolon;		  break;
 		case '[': token.number = tlbracket;       break;
 		case ']': token.number = trbracket;       break;
 		case '{': token.number = tlbrace;         break;
@@ -270,6 +293,8 @@ int hexValue(char ch)
 
 void printToken(struct tokenType token)
 {
+	//printf("file name: %s, line number: %d, column number: %d\n", token.fileName, token.lineNumber, token.columnNumber);
+
 	if (token.number == tident)
 		printf("number: %d, value: %s\n", token.number, token.value.id);
 	else if (token.number == tnumber)
