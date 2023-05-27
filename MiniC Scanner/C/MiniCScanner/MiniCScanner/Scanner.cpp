@@ -20,7 +20,7 @@ void lexicalError(int n);
 
 
 char *tokenName[] = {
-	"!",        "!=",      "%",       "%=",     "%ident",   "%number",
+	"!",        "!=",      "%",       "%=",     "%ident",   "%integer",
 	/* 0          1           2         3          4          5        */
 	"&&",       "(",       ")",       "*",      "*=",       "+",
 	/* 6          7           8         9         10         11        */
@@ -43,8 +43,8 @@ char *tokenName[] = {
 	/* 47        48                                                    */
 
 	//   ...........    additional operand ........................... //
-	":"
-	/* 49                                                              */
+	":",	"\'",	"\"",	"%character",	"%double",	"%string"
+	/* 49    50      51          52             53          54         */
 };
 
 char *keyword[NO_KEYWORD] = {
@@ -62,7 +62,7 @@ struct tokenType scanner()
 {
 	struct tokenType token;
 	int i, index;
-	char ch, id[ID_LENGTH];
+	char ch, id[ID_LENGTH], str[STR_LENGTH];
 
 	/**
 	 * additional token attributes
@@ -91,24 +91,86 @@ struct tokenType scanner()
 			if (index < NO_KEYWORD)    // found, keyword exit
 				token.number = tnum[index];
 			else {                     // not found, identifier exit
-				token.number = tident;
+				token.number = tIdent;
 				strcpy_s(token.value.id, id);
 			}
 		}  // end of identifier or keyword
-		else if (isdigit(ch)) {  // number
-			token.number = tnumber;
-			token.value.num = getNumber(ch);
+		else if (ch == '\''){	// state 2: character literal
+			i = 0;
+
+			token.number = tchar;
+			id[i++] = fgetc(sourceFile);
+
+			// escape charater
+			if(ch == '\\')
+				id[i++] = fgetc(sourceFile);
+			id[i] = '\0';
+			
+			strcpy_s(token.value.id, id);
+
+			// error
+			ch = fgetc(sourceFile);
+			if(ch != '\''){
+				lexicalError(5);
+				ungetc(ch, sourceFile);
+				token.number = tnull;
+			}
+		}
+		else if (isdigit(ch)) {  // state 3: integer & double literal
+			token.number = tInteger;
+			token.value.num = getNumber(token, ch);
+		}
+		else if (ch == '\"') {	// state 4: string literal
+			token.number = tString;
+			
+			i = 0;
+			do {
+				ch = fgetc(sourceFile);
+				str[i++] = ch;
+
+				// escape character
+				if (ch == '\\')
+					str[i++] = fgetc(sourceFile);
+				
+				// string not end error
+				if (ch == '\n') {
+					lexicalError(6);
+					ungetc(ch, sourceFile);
+					token.number = tnull;
+					break;
+				}
+			} while (ch != '\"');
+
+			// delete last "
+			str[i] = '\0';
+			strcpy_s(token.value.s, str);
 		}
 		else switch (ch) {  // special character
 		case '/':
 			ch = fgetc(sourceFile);
-			if (ch == '*')			// text comment
-				do {
-					while (ch != '*') ch = fgetc(sourceFile);
-					ch = fgetc(sourceFile);
-				} while (ch != '/');
-			else if (ch == '/')		// line comment
-				while (fgetc(sourceFile) != '\n');
+			if (ch == '*') {
+				ch = fgetc(sourceFile);
+				if(ch == '*'){		// documented comment
+					do {				// text comment
+						while (ch != '*') ch = fgetc(sourceFile);
+						ch = fgetc(sourceFile);
+					} while (ch != '/');
+				}
+				else {				// text comment
+					do {
+						while (ch != '*') ch = fgetc(sourceFile);
+						ch = fgetc(sourceFile);
+					} while (ch != '/');
+				}
+			}
+			else if (ch == '/') {
+				if(fgetc(sourceFile) == '/'){	// single line documented comment
+					while (fgetc(sourceFile) != '\n');
+				}
+				else{			// line comment
+					while (fgetc(sourceFile) != '\n');
+				}
+			}
 			else if (ch == '=')  token.number = tdivAssign;
 			else {
 				token.number = tdiv;
@@ -232,6 +294,14 @@ void lexicalError(int n)
 		break;
 	case 4: printf("invalid character\n");
 		break;
+	case 5: printf("next character must be \'\n");
+		break;
+	case 6: printf("string must be end in line\n");
+		break;
+	case 7: printf("next character must be Integer\n");
+		break;
+	default:
+		break;
 	}
 }
 
@@ -247,9 +317,9 @@ int superLetterOrDigit(char ch)
 	else return 0;
 }
 
-int getNumber(char firstCharacter)
+double getNumber(tokenType token, char firstCharacter)
 {
-	int num = 0;
+	double num = 0;
 	int value;
 	char ch;
 
@@ -272,6 +342,58 @@ int getNumber(char firstCharacter)
 			num = 10 * num + (int)(ch - '0');
 			ch = fgetc(sourceFile);
 		} while (isdigit(ch));
+
+		// double literal
+		if (ch == '.') {
+			token.number = tDouble;
+
+			ch = fgetc(sourceFile);
+			for (int exp = 1; isdigit(ch); ch = fgetc(sourceFile), exp++) {
+				double d = ch - '0';
+				for (int i = 0; i < exp; i++)
+					d /= 10;
+				num += d;
+			}
+
+			// floating point representation
+			if (ch == 'e') {
+				ch = fgetc(sourceFile);
+				int exp = 0;
+				if (ch == '+') {
+					ch = fgetc(sourceFile);
+					while(isdigit(ch)) {
+						exp = exp * 10 + (ch - '0');
+						ch = fgetc(sourceFile);
+					}
+					// power 10
+					for (int i = 0; i < exp; i++)
+						num *= 10;
+				}
+				else if (ch == '-') {
+					ch = fgetc(sourceFile);
+					while(isdigit(ch)) {
+						exp = exp * 10 + (ch -'0');
+						ch = fgetc(sourceFile);
+					}
+					// power 0.1
+					for (int i = 0; i < exp; i++)
+						num /= 10;
+				}
+				else if (isdigit(ch)) {
+					while(isdigit(ch)) {
+						exp = exp * 10 + (ch - '0');
+						ch = fgetc(sourceFile);
+					}
+					// power 10
+					for (int i = 0; i < exp; i++)
+						num *= 10;
+				}
+				else {
+					lexicalError(7);
+					token.number = tnull;
+				}
+			}
+		}
 	}
 	ungetc(ch, sourceFile);  /*  retract  */
 	return num;
@@ -295,10 +417,16 @@ void printToken(struct tokenType token)
 {
 	//printf("file name: %s, line number: %d, column number: %d\n", token.fileName, token.lineNumber, token.columnNumber);
 
-	if (token.number == tident)
+	if (token.number == tIdent)
 		printf("number: %d, value: %s\n", token.number, token.value.id);
-	else if (token.number == tnumber)
+	else if (token.number == tInteger)
 		printf("number: %d, value: %d\n", token.number, token.value.num);
+	else if (token.number == tCharacter)
+		printf("number: %d, value: %c\n", token.number, token.value.c);
+	else if (token.number == tDouble)
+		printf("number: %d, value: %lf\n", token.number, token.value.num);
+	else if (token.number == tString)
+		printf("number: %d, value: %s\n", token.number, token.value.s);
 	else
 		printf("number: %d(%s)\n", token.number, tokenName[token.number]);
 

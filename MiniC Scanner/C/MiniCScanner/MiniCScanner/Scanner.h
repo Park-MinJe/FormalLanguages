@@ -9,14 +9,24 @@
 //#define NO_KEYWORD 7
 #define NO_KEYWORD 16
 #define ID_LENGTH 12
+#define STR_LENGTH 509
 
 #define FILE_LEN 30
 
+/**
+ * additional token attributes
+ * 
+ * char fileName[FILE_LEN]
+ * int lineNumber
+ * int columnNumber
+*/
 struct tokenType {
 	int number;
 	union {
 		char id[ID_LENGTH];
-		int num;
+		double num;
+		char c;
+		char s[509];
 	} value;
 
 	// additional token attributes
@@ -28,7 +38,7 @@ struct tokenType {
 
 enum tsymbol {
 	tnull = -1,
-	tnot, tnotequ, tremainder, tremAssign, tident, tnumber,
+	tnot, tnotequ, tremainder, tremAssign, tIdent, tInteger,
 	/* 0          1            2         3            4          5     */
 	tand, tlparen, trparen, tmul, tmulAssign, tplus,
 	/* 6          7            8         9           10         11     */
@@ -51,8 +61,8 @@ enum tsymbol {
 	/* 47       48                                                     */
 
 	//   ...........    additional operand ........................... //
-	tcolon
-	/* 49                                                              */
+	tcolon,	tquote,	tdoubleQuote,	tCharacter,	tDouble,	tString
+	/* 49    50         51              52        53           54      */
 };
 
 
